@@ -67,12 +67,13 @@ import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode;
 import java.util.*;
 
 @SuppressWarnings("deprecation")
-public class KotlinRunConfiguration extends JetRunConfiguration {
+public class KotlinRunConfiguration extends JetRunConfiguration implements ConfigurationWithCommandLineShortener {
     public String VM_PARAMETERS;
     public String PROGRAM_PARAMETERS;
     public boolean ALTERNATIVE_JRE_PATH_ENABLED;
     public String ALTERNATIVE_JRE_PATH;
     public boolean PASS_PARENT_ENVS = true;
+    public ShortenCommandLine SHORTEN_COMMAND_LINE = null;
 
     private Map<String, String> myEnvs = new LinkedHashMap<String, String>();
 
@@ -112,6 +113,7 @@ public class KotlinRunConfiguration extends JetRunConfiguration {
 
         readModule(element);
         EnvironmentVariablesComponent.readExternal(element, getEnvs());
+        setShortenCommandLine(ShortenCommandLine.readShortenClasspathMethod(element));
     }
 
     @Override
@@ -123,6 +125,7 @@ public class KotlinRunConfiguration extends JetRunConfiguration {
         writeModule(element);
         EnvironmentVariablesComponent.writeExternal(element, getEnvs());
         PathMacroManager.getInstance(getProject()).collapsePathsRecursively(element);
+        ShortenCommandLine.writeShortenClasspathMethod(element, SHORTEN_COMMAND_LINE);
     }
 
     @Override
@@ -198,6 +201,17 @@ public class KotlinRunConfiguration extends JetRunConfiguration {
     @Override
     public void setAlternativeJrePath(String path) {
         ALTERNATIVE_JRE_PATH = path;
+    }
+
+    @Nullable
+    @Override
+    public ShortenCommandLine getShortenCommandLine() {
+        return SHORTEN_COMMAND_LINE;
+    }
+
+    @Override
+    public void setShortenCommandLine(@Nullable ShortenCommandLine mode) {
+        SHORTEN_COMMAND_LINE = mode;
     }
 
     @Override
@@ -344,7 +358,7 @@ public class KotlinRunConfiguration extends JetRunConfiguration {
             JavaParametersUtil.configureModule(module, params, classPathType, jreHome);
             setupJavaParameters(params);
 
-            params.setShortenCommandLine(null, module.getProject());
+            params.setShortenCommandLine(myConfiguration.getShortenCommandLine(), module.getProject());
             params.setMainClass(myConfiguration.getRunClass());
             setupModulePath(params, module);
 
